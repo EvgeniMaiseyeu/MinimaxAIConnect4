@@ -10,7 +10,6 @@ private:
 public:
 	GameField();
 	void printField();
-	~GameField() {};
 	bool gameOverCheck(std::string s);
 	void addMove(int a, std::string p);
 	bool validMove(std::string move);
