@@ -12,6 +12,15 @@
 //1  8   15  22  29  36  43
 //0  7   14  21  28  35  42
 
+BitboardField::BitboardField()
+{
+}
+
+BitboardField::BitboardField(std::vector<unsigned __int64> openings)
+{
+	book = openings;
+}
+
 BitboardField::BitboardField(std::string fileName)
 {
 	//std::cout << std::bitset<64>(aiBoard);
@@ -101,8 +110,11 @@ void BitboardField::convertIntoArray()
 			if (playerBoard & moveMask) {
 				field[5-j][i] = "o";
 			}
-			if (aiBoard & moveMask) {
+			else if (aiBoard & moveMask) {
 				field[5 - j][i] = "x";
+			}
+			else {
+				field[5 - j][i] = " ";
 			}
 			moveMask = moveMask << 1;
 		}
@@ -126,22 +138,22 @@ bool BitboardField::playerWonCheck()
 {
 	unsigned __int64 tempBoard = playerBoard & (playerBoard >> 6);
 	if (tempBoard & (tempBoard >> 2 * 6)) { // check \ diagonal
-		std::cout << "ai has won backslash" << std::endl;
+	//	std::cout << "player has won backslash" << std::endl;
 		return true;
 	}
 	tempBoard = playerBoard & (playerBoard >> 7);
 	if (tempBoard & (tempBoard >> 2 * 7)) { // check horizontal -
-		std::cout << "ai has won horizontal" << std::endl;
+	//	std::cout << "player has won horizontal" << std::endl;
 		return true;
 	}
 	tempBoard = playerBoard & (playerBoard >> 8);
 	if (tempBoard & (tempBoard >> 2 * 8)) { // check / diagonal
-		std::cout << "ai has won slash" << std::endl;
+	//	std::cout << "player has won slash" << std::endl;
 		return true;
 	}
 	tempBoard = playerBoard & (playerBoard >> 1);
 	if (tempBoard & (tempBoard >> 2)) {   // check vertical |
-		std::cout << "ai has won vertical" << std::endl;
+	//	std::cout << "player has won vertical" << std::endl;
 		return true;
 	}
 	return false;
@@ -152,22 +164,22 @@ bool BitboardField::aiWonCheck()
 {
 	unsigned __int64 tempBoard = aiBoard & (aiBoard >> 6);
 	if (tempBoard & (tempBoard >> 2 * 6)) { // check \ diagonal
-		std::cout << "ai has won backslash" << std::endl;
+		//std::cout << "ai has won backslash" << std::endl;
 		return true;
 	}
 	tempBoard = aiBoard & (aiBoard >> 7);
 	if (tempBoard & (tempBoard >> 2 * 7)) { // check horizontal -
-		std::cout << "ai has won horizontal" << std::endl;
+	//	std::cout << "ai has won horizontal" << std::endl;
 		return true;
 	}
 	tempBoard = aiBoard & (aiBoard >> 8);
 	if (tempBoard & (tempBoard >> 2 * 8)) { // check / diagonal
-		std::cout << "ai has won slash" << std::endl;
+		//std::cout << "ai has won slash" << std::endl;
 		return true;
 	}
 	tempBoard = aiBoard & (aiBoard >> 1);
 	if (tempBoard & (tempBoard >> 2)) {   // check vertical |
-		std::cout << "ai has won vertical" << std::endl;
+		//std::cout << "ai has won vertical" << std::endl;
 		return true;
 	}
 	return false;
@@ -180,10 +192,12 @@ void BitboardField::aiAddMove(int a)
 	for (int i = 0; i < 6; i++)
 	{
 		if (!(combBoard & moveMask)) {
-			aiBoard = aiBoard & moveMask;
+			aiBoard = aiBoard | moveMask;
+			break;
 		}
 		moveMask = moveMask << 1;
 	}
+	pastMoves.push_back(a);
 }
 
 void BitboardField::playerAddMove(int a)
@@ -193,10 +207,12 @@ void BitboardField::playerAddMove(int a)
 	for (int i = 0; i < 6; i++)
 	{
 		if (!(combBoard & moveMask)) {
-			playerBoard = playerBoard & moveMask;
+			playerBoard = playerBoard | moveMask;
+			break;
 		}
 		moveMask = moveMask << 1;
 	}
+	pastMoves.push_back(a);
 }
 
 bool BitboardField::validMove(std::string move)
@@ -213,7 +229,33 @@ bool BitboardField::validMove(std::string move)
 
 int BitboardField::evaluate()
 {
-	return 0;
+	int utility = 138;
+	int sum = 0;
+
+	unsigned __int64 checker = blankBoard + 1;
+	for (int i = 0; i < 7; i++) {
+		for (int j = 0; j < 6; j++) {
+			if (aiBoard & checker) {
+				sum += evaluationTable[5 - j][i];
+			}
+			else if (playerBoard & checker) {
+				sum -= evaluationTable[5 - j][i];
+			}
+			checker = checker << 1;
+		}
+		checker = checker << 1;
+	}
+
+	return utility + sum;
+	/*
+	for (int i = 0; i < 6; i++)
+		for (int j = 0; j <7; j++)	
+			if (field[i][j] == "x")
+				sum += evaluationTable[i][j];
+			else if (field[i][j] == "o")
+				sum -= evaluationTable[i][j];
+
+	return utility + sum; */
 }
 
 std::vector<int> BitboardField::genMoves()
@@ -243,14 +285,14 @@ void BitboardField::undo()
 {
 	int pastMove = pastMoves[pastMoves.size() - 1];
 	pastMoves.pop_back();
-	unsigned __int64 check;
+	unsigned __int64 check = pow(2, pastMove * 7 + 5);
 	for (int i = 0; i < 6; i++) {
 		if (check & playerBoard) {
-			field[i][pastMove] = " ";
+			playerBoard = check ^ playerBoard;
 			break;
 		}
 		if (check & aiBoard) {
-			
+			aiBoard = check ^ aiBoard;
 			break;
 		}
 		check = check >> 1;
@@ -271,6 +313,28 @@ int BitboardField::getMoveCount()
 
 int BitboardField::evaluateBook(bool playfirst)
 {
-	return 0;
+	bool next = false;
+	for (int k = 0; k < 67557; k++) {
+		//possible issue test later
+		if ((book[k*2] == aiBoard) && (book[k*2+1] == playerBoard)) {
+			if (bookResults[k] == "win") {
+				//	std::cout << "found a win" << std::endl;
+				if (playfirst) return 1000;
+				else return -1000;
+			}
+
+			if (bookResults[k] == "loss") {
+				//		std::cout << "found a loss" << std::endl;
+				if (playfirst) return -1000;
+				else return 1000;
+			}
+			if (bookResults[k] == "draw") {
+				//	std::cout << "found a draw" << std::endl;
+				return 0;
+			}
+			
+		}
+	}
+	return -10000;
 }
 

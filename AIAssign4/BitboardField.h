@@ -14,6 +14,8 @@ private:
 	std::vector<int> pastMoves;
 	int evaluationTable[6][7];
 public:
+	BitboardField();
+	BitboardField(std::vector<unsigned __int64> openings);
 	BitboardField(std::string fileName);
 	void printField();
 	bool playerWonCheck();
