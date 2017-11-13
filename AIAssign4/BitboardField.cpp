@@ -260,10 +260,32 @@ int BitboardField::evaluate()
 
 std::vector<int> BitboardField::genMoves()
 {
-	unsigned __int64 leftcheck = 0b0000000000000000000000000000000000000100000000000000000000000000;
-	unsigned __int64 rightcheck = leftcheck;
+	unsigned __int64 c0 = 0b0000000000000000000000000000000000000000000000000000000000100000;
+	unsigned __int64 c1 = 0b0000000000000000000000000000000000000000000000000001000000000000;
+	unsigned __int64 c2 = 0b0000000000000000000000000000000000000000000010000000000000000000;
+	unsigned __int64 c3 = 0b0000000000000000000000000000000000000100000000000000000000000000;
+	unsigned __int64 c4 = 0b0000000000000000000000000000001000000000000000000000000000000000;
+	unsigned __int64 c5 = 0b0000000000000000000000010000000000000000000000000000000000000000;
+	unsigned __int64 c6 = 0b0000000000000000100000000000000000000000000000000000000000000000;
 	unsigned __int64 comboBoard = aiBoard | playerBoard;
 	std::vector<int> v;
+
+	if (!(c3 & comboBoard))
+		v.push_back(3);
+	if (!(c4 & comboBoard))
+		v.push_back(4);
+	if (!(c2 & comboBoard))
+		v.push_back(2);
+	if (!(c5 & comboBoard))
+		v.push_back(5);
+	if (!(c1 & comboBoard))
+		v.push_back(1);
+	if (!(c6 & comboBoard))
+		v.push_back(6);
+	if (!(c0 & comboBoard))
+		v.push_back(0);
+
+	/* old genMoves
 	for (int j = 0; j < 4; j++) {
 		if (j == 0) {
 			if (!(leftcheck & comboBoard))
@@ -278,6 +300,7 @@ std::vector<int> BitboardField::genMoves()
 				v.push_back(3 - j);
 		}
 	}
+	*/
 	return v;
 }
 
@@ -311,6 +334,74 @@ int BitboardField::getMoveCount()
 	return pastMoves.size();
 }
 
+void BitboardField::flip() {
+	unsigned __int64 leftSide = 0;
+	unsigned __int64 rightSide = 0;
+	unsigned __int64 middle = 0;
+	unsigned __int64 check = 1;
+
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 6; j++) {
+			if (check & aiBoard) {
+				rightSide += pow(2, 42 - (7*i) + j);
+			}
+			check = check << 1;
+		}
+		check = check << 1;
+	}
+
+	for (int j = 0; j < 6; j++) {
+		if (check & aiBoard) {
+			leftSide += pow(2, 21 + j);
+		}
+		check = check << 1;
+	}
+	check = check << 1;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 6; j++) {
+			if (check & aiBoard) {
+				leftSide += pow(2, 14 - (7 * i) + j);
+			}
+			check = check << 1;
+		}
+		check = check << 1;
+	}
+	aiBoard = leftSide | rightSide | middle;
+
+	leftSide = 0;
+	rightSide = 0;
+	middle = 0;
+	check = 1;
+
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 6; j++) {
+			if (check & playerBoard) {
+				rightSide += pow(2, 42 - (7 * i) + j);
+			}
+			check = check << 1;
+		}
+		check = check << 1;
+	}
+
+	for (int j = 0; j < 6; j++) {
+		if (check & playerBoard) {
+			leftSide += pow(2, 21 + j);
+		}
+		check = check << 1;
+	}
+	check = check << 1;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 6; j++) {
+			if (check & playerBoard) {
+				leftSide += pow(2, 14 - (7 * i) + j);
+			}
+			check = check << 1;
+		}
+		check = check << 1;
+	}
+	playerBoard = leftSide | rightSide | middle;
+}
+
 int BitboardField::evaluateBook(bool playfirst)
 {
 	bool next = false;
@@ -318,7 +409,7 @@ int BitboardField::evaluateBook(bool playfirst)
 		//possible issue test later
 		if ((book[k*2] == aiBoard) && (book[k*2+1] == playerBoard)) {
 			if (bookResults[k] == "win") {
-				//	std::cout << "found a win" << std::endl;
+			//	std::cout << "found a win" << std::endl;
 				if (playfirst) return 1000;
 				else return -1000;
 			}
@@ -335,6 +426,32 @@ int BitboardField::evaluateBook(bool playfirst)
 			
 		}
 	}
+	flip();
+	for (int k = 0; k < 67557; k++) {
+		//possible issue test later
+		if ((book[k * 2] == aiBoard) && (book[k * 2 + 1] == playerBoard)) {
+			if (bookResults[k] == "win") {
+				//	std::cout << "found a win" << std::endl;
+				flip();
+				if (playfirst) return 1000;
+				else return -1000;
+			}
+
+			if (bookResults[k] == "loss") {
+				flip();
+				//		std::cout << "found a loss" << std::endl;
+				if (playfirst) return -1000;
+				else return 1000;
+			}
+			if (bookResults[k] == "draw") {
+				flip();
+				//	std::cout << "found a draw" << std::endl;
+				return 0;
+			}
+
+		}
+	}
+	flip();
 	return -10000;
 }
 

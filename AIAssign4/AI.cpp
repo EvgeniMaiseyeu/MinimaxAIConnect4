@@ -13,7 +13,7 @@ AI::~AI()
 }
 
 AI::AI(bool pFirst, std::string fileName) : playFirst(pFirst) {
-	tt = new TranspositionTable();
+	//tt = new TranspositionTable();
 	terminate = false;
 	std::string line;
 	std::ifstream myfile(fileName);
@@ -220,14 +220,17 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 	if (this->terminate) {
 		return 0;
 	}
+	/*
 	unsigned __int64 pB = bb->getPlayerBoard();
 	unsigned __int64 aiB = bb->getAIBoard();
 	unsigned __int16 ttScore = tt->get(pB, aiB);
 	if (ttScore != 0) {
+		tpcount++;
 		if (ttScore == 10001) return -1000;
 		else return ttScore;
 	}
-	if (bb->getMoveCount() < 9 && !skipBook && playFirst/*opening book 8 ply*/) {
+	*/
+	else if (bb->getMoveCount() < 9 && !skipBook && playFirst/*opening book 8 ply*/) {
 		depth = 8 - bb->getMoveCount();
 		if (bb->aiWonCheck()) {
 			return 1000;
@@ -259,36 +262,44 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 		int value = -1000;
 		for (int i = 0; i < moves.size(); i++) {
 			bb->aiAddMove(moves[i]);
+			bb->convertIntoArray();
 			value = std::max(value, bbminimax(bb, depth - 1, !maxPlayer, alpha, beta, skipBook));
+			/*if (ttScore == 0 && !skipBook) {
+				unsigned __int16 val = 0;
+				if (value == -1000)
+					val = 10001;
+				else
+					val = value;
+				tt->store(pB, aiB, val);
+			}*/
 			alpha = std::max(alpha, value);
 			bb->undo();
 			if (beta <= alpha)
 				break;
 		}
-		unsigned __int16 val = 0;
-		if (value == -1000)
-			val = 10001;
-		else
-			val = value;
-		tt->store(pB, aiB, val);
+
 		return value;
 	}
 	else {
 		int value = 1000;
 		for (int i = 0; i < moves.size(); i++) {
 			bb->playerAddMove(moves[i]);
+			bb->convertIntoArray();
 			value = std::min(value, bbminimax(bb, depth - 1, !maxPlayer, alpha, beta, skipBook));
+		/*	if (ttScore == 0 && !skipBook) {
+				unsigned __int16 val = 0;
+				if (value == -1000)
+					val = 10001;
+				else
+					val = value;
+				tt->store(pB, aiB, val);
+			}*/
 			bb->undo();
 			beta = std::min(beta, value);
 			if (beta <= alpha)
 				break;
 		}
-		unsigned __int16 val = 0;
-		if (value == -1000)
-			val = 10001;
-		else
-			val = value;
-		tt->store(pB, aiB, val);
+
 		return value;
 	}
 
@@ -296,7 +307,7 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 
 int AI::bbmakeMove(BitboardField * bb)
 {
-	int depth = 8;
+	int depth = 4;
 	int moveIndex = 0;
 	int oldvalue = 0;
 	std::vector<int> moves = bb->genMoves();
@@ -358,12 +369,12 @@ int AI::bbmakeMove(BitboardField * bb)
 			}
 			else if (moves.size() == 5) {
 				//(30 needed worst case)
-				playFirst ? depth = 14 : depth = 14;
+				playFirst ? depth = 15 : depth = 14;
 			}
 			else {
 				depth = 25;
 			}
-
+			printf("%d\n", moves.size());
 			for (int i = 0; i < moves.size(); i++) {
 				threads.push_back(std::thread(&AI::bbthreadTest, this, std::ref(moves), std::ref(bbs), depth, std::ref(vals), i));
 				m.lock();
@@ -399,6 +410,7 @@ void AI::bbthreadTest(std::vector<int> moves, std::vector<BitboardField*> bbs, i
 	int value = -1000;
 	int oldvalue = 0;
 	bbs[count]->aiAddMove(moves[count]);
+	bbs[count]->convertIntoArray();
 	value = std::max(value, bbminimax(bbs[count], depth - 1, false, -10000, 10000, false));
 	bbs[count]->undo();
 	v[count] = value;

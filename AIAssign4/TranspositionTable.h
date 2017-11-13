@@ -1,5 +1,5 @@
 #pragma once
-#define ARRAY_SIZE 25000000	
+#define ARRAY_SIZE 3000000	
 
 class TranspositionTable {
 private:

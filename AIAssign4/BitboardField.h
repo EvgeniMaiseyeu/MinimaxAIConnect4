@@ -27,6 +27,7 @@ public:
 	std::vector<int> genMoves();
 	void undo();
 	bool draw();
+	void flip();
 	int getMoveCount();
 	int evaluateBook(bool playfirst);
 	void convertIntoArray();

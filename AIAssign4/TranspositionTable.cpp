@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "TranspositionTable.h"
 #include <random>
+#include <bitset>
 
 TranspositionTable::TranspositionTable()
 {
@@ -20,10 +21,18 @@ TranspositionTable::TranspositionTable()
 
 unsigned __int16 TranspositionTable::get(unsigned __int64 playerkey, unsigned __int64 aikey)
 {
-	unsigned __int64 zHash = hashFunc(playerkey, aikey);
+	unsigned __int64 zHash = 0;
+	zHash = hashFunc(playerkey, aikey);
 	int index = zHash % ARRAY_SIZE;
-	if (zHash == (TPT[index].key ^ TPT[index].value))
-		return TPT[index].value; 
+	//----------------WEIRD MAGIC CODE MAKES NO SENSE-----------------------------------
+	if (zHash != 0) {
+		std::cout << std::bitset<0>(TPT[index].value);
+	}
+	//----------------WEIRD MAGIC CODE MAKES NO SENSE-----------------------------------
+	unsigned __int64 check = TPT[index].key ^  TPT[index].value;
+	if (zHash == check) {
+		return TPT[index].value;
+	}
 	return 0;
 }
 
@@ -32,11 +41,13 @@ void TranspositionTable::store(unsigned __int64 playerkey, unsigned __int64 aike
 	unsigned __int64 zHash = hashFunc(playerkey, aikey);
 	unsigned __int64 key = zHash ^ value;
 	int index = zHash % ARRAY_SIZE;
+//	std::cout << std::bitset<64>(key) << std::endl;
 	TPT[index] = { key , value };
 }
 
 unsigned __int64 TranspositionTable::hashFunc(unsigned __int64 playerkey, unsigned __int64 aikey)
 {
+
 	unsigned __int64 zobristHash;
 	unsigned __int64 check = 1;
 	for (int i = 0; i < 7; i++) {
