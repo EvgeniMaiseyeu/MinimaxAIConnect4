@@ -7,7 +7,13 @@
 #include <fstream>
 #include <mutex>
 
+AI::~AI()
+{
+	delete(tt);
+}
+
 AI::AI(bool pFirst, std::string fileName) : playFirst(pFirst) {
+	tt = new TranspositionTable();
 	terminate = false;
 	std::string line;
 	std::ifstream myfile(fileName);
@@ -214,7 +220,14 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 	if (this->terminate) {
 		return 0;
 	}
-	else if (bb->getMoveCount() < 9 && !skipBook && playFirst/*opening book 8 ply*/) {
+	unsigned __int64 pB = bb->getPlayerBoard();
+	unsigned __int64 aiB = bb->getAIBoard();
+	unsigned __int16 ttScore = tt->get(pB, aiB);
+	if (ttScore != 0) {
+		if (ttScore == 10001) return -1000;
+		else return ttScore;
+	}
+	if (bb->getMoveCount() < 9 && !skipBook && playFirst/*opening book 8 ply*/) {
 		depth = 8 - bb->getMoveCount();
 		if (bb->aiWonCheck()) {
 			return 1000;
@@ -252,6 +265,12 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 			if (beta <= alpha)
 				break;
 		}
+		unsigned __int16 val = 0;
+		if (value == -1000)
+			val = 10001;
+		else
+			val = value;
+		tt->store(pB, aiB, val);
 		return value;
 	}
 	else {
@@ -264,6 +283,12 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 			if (beta <= alpha)
 				break;
 		}
+		unsigned __int16 val = 0;
+		if (value == -1000)
+			val = 10001;
+		else
+			val = value;
+		tt->store(pB, aiB, val);
 		return value;
 	}
 

@@ -30,4 +30,6 @@ public:
 	int getMoveCount();
 	int evaluateBook(bool playfirst);
 	void convertIntoArray();
+	unsigned __int64 getPlayerBoard() { return playerBoard; }
+	unsigned __int64 getAIBoard() { return aiBoard; }
 };
