@@ -7,48 +7,19 @@
 #include <fstream>
 #include <mutex>
 
+//clears memory used by AI class
 AI::~AI()
 {
-	delete(tt);
+	//delete(tt);
 }
 
+//constructor for ai
 AI::AI(bool pFirst, std::string fileName) : playFirst(pFirst) {
 	//tt = new TranspositionTable();
 	terminate = false;
-	std::string line;
-	std::ifstream myfile(fileName);
-	int count = 0;
-	if (myfile.is_open())
-	{
-		while (getline(myfile, line))
-		{
-			for (int i = 0; i < 83; i += 2) {
-				if (line[i] == 'b')
-					book[count][5 - (i / 2) % 6][(i / 2) / 6] = " ";
-				else
-					book[count][5 - (i / 2) % 6][(i / 2) / 6] += line[i];
-				/*
-				else if (line[i] == 'x')
-				book[count][5 - (i / 2) % 6][(i / 2) / 6] = "x";
-				else if (line[i] == 'o')
-				book[count][5 - (i / 2) % 6][(i / 2) / 6] = "o";
-				*/
-			}
-			if (line.length() == 87)
-				book[count][0][7] = "win";
-			else if (line[86] == 's')
-				book[count][0][7] = "loss";
-			else
-				book[count][0][7] = "draw";
-
-			//	std::cout << count << std::endl;
-			count++;
-		}
-		myfile.close();
-	}
 }
 
-//(*the minimax value of n, searched to depth d *)
+//minimax for old game field not  used
 int AI::minimax(GameField* g, int depth, bool maxPlayer, int alpha, int beta) {
 	if (this->terminate) {
 		return 0;
@@ -108,6 +79,7 @@ int AI::minimax(GameField* g, int depth, bool maxPlayer, int alpha, int beta) {
 
 }
 
+//controls the minimax calls
 int AI::makeMove(GameField* gf) {
 	int depth = 2;
 	int moveIndex = 0;
@@ -205,6 +177,7 @@ int AI::makeMove(GameField* gf) {
 	return moves[moveIndex];
 }
 
+//old thread function  to split up minimax work
 void AI::threadTest(std::vector<int> moves, std::vector<GameField*> gs, int depth, std::vector<int> &v, int count) {
 	int value = -1000;
 	int oldvalue = 0;
@@ -215,6 +188,7 @@ void AI::threadTest(std::vector<int> moves, std::vector<GameField*> gs, int dept
 	//store value;
 }
 
+//current bitboard minimax algorithm with optimizations
 int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int beta, bool skipBook)
 {
 	if (this->terminate) {
@@ -305,6 +279,7 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 
 }
 
+// minimax controller can set depth and starts threads and waits for them to join
 int AI::bbmakeMove(BitboardField * bb)
 {
 	int depth = 4;
@@ -405,6 +380,7 @@ int AI::bbmakeMove(BitboardField * bb)
 	return moves[moveIndex];
 }
 
+//current bitboard thread function each thread calls this to check a possible move subtree and return the value
 void AI::bbthreadTest(std::vector<int> moves, std::vector<BitboardField*> bbs, int depth, std::vector<int>& v, int count)
 {
 	int value = -1000;

@@ -5,7 +5,6 @@
 
 class AI {
 private:
-	std::string book[67557][6][8];    //IMPORTNAT: BOOK[x][0][7] IS TOP RIGHT CORNER POSITION WHICH WILL STORE WIN LOSS OR DRAW TEXT
 	TranspositionTable* tt;
 	int tpcount;
 public:

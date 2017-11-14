@@ -1,7 +1,10 @@
 #pragma once
 #include "stdafx.h"
 #include "GameField.h"
+//NOTE
+//This is the old version of game field which I do not use anymore, I changed from using 2d array of strings to using bitboards
 
+//game field constructor
 GameField::GameField() {
 	//initialize field to just contain one space per square
 	for (int i = 0; i < 6; i++)
@@ -69,12 +72,14 @@ void GameField::printField() {
 	std::cout << "\t  0   1   2   3   4   5   6  " << std::endl;
 }
 
+//check if game is a draw
 bool GameField::draw() {
 	if (pastMoves.size() == 42) 
 		return true;
 	return false;
 }
 
+//add move to game field
 void GameField::addMove(int move, std::string p) {
 	for (int i = 5; i > -1; i--) {
 		if (field[i][move] == " ") {
@@ -85,12 +90,14 @@ void GameField::addMove(int move, std::string p) {
 	pastMoves.push_back(move);
 }
 
+//check if passed in move is valid
 bool GameField::validMove(std::string move) {
 	if (move.size() == 1 && isdigit(move[0]) && (move[0] - '0') < 7 && field[0][(move[0] - '0')] == " ")
 		return true;
 	return false;
 }
 
+//check if someone won
 bool GameField::gameOverCheck(std::string pattern) {
 	//check vertical conditions
 	if (this->pastMoves.size() < 7)
@@ -236,6 +243,7 @@ bool GameField::gameOverCheck(std::string pattern) {
 	return false;
 }
 
+//used in game over check for left diagonals '/'
 bool GameField::checkLeftDownDiag(int x, int y, std::string pat) {
 	int i = y;
 	int j = x;
@@ -258,6 +266,7 @@ bool GameField::checkLeftDownDiag(int x, int y, std::string pat) {
 	return true;
 }
 
+//used in game over check for right diagonals '\'
 bool GameField::checkRightDownDiag(int x, int y, std::string pat) {
 	int i = y;
 	int j = x;
@@ -280,6 +289,7 @@ bool GameField::checkRightDownDiag(int x, int y, std::string pat) {
 	return true;
 }
 
+//evaluate function to score boards
 int GameField::evaluate() {
 	
 	int utility = 138;
@@ -299,6 +309,7 @@ int GameField::evaluate() {
 	return utility + sum;
 }
 
+//generate all possible moves
 std::vector<int> GameField::genMoves() {
 	std::vector<int> v;
 	for (int j = 0; j < 4; j++) {
@@ -316,6 +327,7 @@ std::vector<int> GameField::genMoves() {
 	return v;
 }
 
+//undo a move
 void GameField::undo() {
 	int pastMove = pastMoves[pastMoves.size() - 1];
 	pastMoves.pop_back();
@@ -327,6 +339,7 @@ void GameField::undo() {
 	}
 }
 
+//opening book main function
 int GameField::evaluateBook(std::string(*book)[67557][6][8], bool first) {
 	int winLossDrawNone;
 	winLossDrawNone = matchbook(book);
@@ -345,6 +358,7 @@ int GameField::evaluateBook(std::string(*book)[67557][6][8], bool first) {
 	return -10000;
 }
 
+//check if board state is in the opening book
 int GameField::matchbook(std::string(*book)[67557][6][8]) {
 	bool next = false;
 	for (int k = 0; k < 67557; k++) {
@@ -379,6 +393,7 @@ int GameField::matchbook(std::string(*book)[67557][6][8]) {
 	}
 }
 
+//return number of moves played so far
 int GameField::getMoveCount() {
 	return pastMoves.size();
 }

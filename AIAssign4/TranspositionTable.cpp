@@ -3,6 +3,7 @@
 #include <random>
 #include <bitset>
 
+//constructor which creates zobrist hash table
 TranspositionTable::TranspositionTable()
 {
 	std::random_device rd;
@@ -19,6 +20,7 @@ TranspositionTable::TranspositionTable()
 	}
 }
 
+//get a board position from the hash table
 unsigned __int16 TranspositionTable::get(unsigned __int64 playerkey, unsigned __int64 aikey)
 {
 	unsigned __int64 zHash = 0;
@@ -36,6 +38,7 @@ unsigned __int16 TranspositionTable::get(unsigned __int64 playerkey, unsigned __
 	return 0;
 }
 
+//store a board position and value in the hash table
 void TranspositionTable::store(unsigned __int64 playerkey, unsigned __int64 aikey, unsigned __int16 value)
 {
 	unsigned __int64 zHash = hashFunc(playerkey, aikey);
@@ -45,6 +48,7 @@ void TranspositionTable::store(unsigned __int64 playerkey, unsigned __int64 aike
 	TPT[index] = { key , value };
 }
 
+//zobrist hash function slightly modified
 unsigned __int64 TranspositionTable::hashFunc(unsigned __int64 playerkey, unsigned __int64 aikey)
 {
 

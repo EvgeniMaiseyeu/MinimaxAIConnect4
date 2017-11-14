@@ -12,15 +12,18 @@
 //1  8   15  22  29  36  43
 //0  7   14  21  28  35  42
 
+//default constructor
 BitboardField::BitboardField()
 {
 }
 
+//unused constructor may be useful later
 BitboardField::BitboardField(std::vector<unsigned __int64> openings)
 {
 	book = openings;
 }
 
+//constructor that sets up evaluation table and opening book
 BitboardField::BitboardField(std::string fileName)
 {
 	//std::cout << std::bitset<64>(aiBoard);
@@ -102,6 +105,7 @@ BitboardField::BitboardField(std::string fileName)
 	}
 }
 
+//convert bitboard into an array this is used for debug purposes
 void BitboardField::convertIntoArray()
 {
 	unsigned __int64 moveMask = 0b0000000000000000000000000000000000000000000000000000000000000001;
@@ -122,6 +126,7 @@ void BitboardField::convertIntoArray()
 	}
 }
 
+//print field to console
 void BitboardField::printField()
 {
 	convertIntoArray();
@@ -134,6 +139,7 @@ void BitboardField::printField()
 	std::cout << "\t  0   1   2   3   4   5   6  " << std::endl;
 }
 
+//check if player won
 bool BitboardField::playerWonCheck()
 {
 	unsigned __int64 tempBoard = playerBoard & (playerBoard >> 6);
@@ -160,6 +166,7 @@ bool BitboardField::playerWonCheck()
 	return false;
 }
 
+//check if ai won
 bool BitboardField::aiWonCheck()
 {
 	unsigned __int64 tempBoard = aiBoard & (aiBoard >> 6);
@@ -185,6 +192,7 @@ bool BitboardField::aiWonCheck()
 	return false;
 }
 
+//add ai move
 void BitboardField::aiAddMove(int a)
 {
 	unsigned __int64 combBoard = aiBoard | playerBoard;
@@ -200,6 +208,7 @@ void BitboardField::aiAddMove(int a)
 	pastMoves.push_back(a);
 }
 
+//add player move
 void BitboardField::playerAddMove(int a)
 {
 	unsigned __int64 combBoard = aiBoard | playerBoard;
@@ -215,6 +224,7 @@ void BitboardField::playerAddMove(int a)
 	pastMoves.push_back(a);
 }
 
+//check if move is valid
 bool BitboardField::validMove(std::string move)
 {
 	unsigned __int64 check;
@@ -227,6 +237,7 @@ bool BitboardField::validMove(std::string move)
 	return false;
 }
 
+//standard evaluate node function for board that isint a draw loss or win
 int BitboardField::evaluate()
 {
 	int utility = 138;
@@ -258,6 +269,7 @@ int BitboardField::evaluate()
 	return utility + sum; */
 }
 
+//return all possible moves for ai
 std::vector<int> BitboardField::genMoves()
 {
 	unsigned __int64 c0 = 0b0000000000000000000000000000000000000000000000000000000000100000;
@@ -304,6 +316,7 @@ std::vector<int> BitboardField::genMoves()
 	return v;
 }
 
+//undo last move
 void BitboardField::undo()
 {
 	int pastMove = pastMoves[pastMoves.size() - 1];
@@ -322,6 +335,7 @@ void BitboardField::undo()
 	}
 }
 
+//check if game is a draw
 bool BitboardField::draw()
 {
 	if (pastMoves.size() == 42)
@@ -329,11 +343,13 @@ bool BitboardField::draw()
 	return false;
 }
 
+//return current number of moves played
 int BitboardField::getMoveCount()
 {
 	return pastMoves.size();
 }
 
+//only used for opening book checks
 void BitboardField::flip() {
 	unsigned __int64 leftSide = 0;
 	unsigned __int64 rightSide = 0;
@@ -402,6 +418,7 @@ void BitboardField::flip() {
 	playerBoard = leftSide | rightSide | middle;
 }
 
+//checks if board state is in the opening book
 int BitboardField::evaluateBook(bool playfirst)
 {
 	bool next = false;
