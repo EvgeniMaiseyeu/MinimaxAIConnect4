@@ -41,6 +41,8 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 	else if (bb->playerWonCheck()) {
 		return -1000;
 	}
+	else if (bb->getMoveCount() > 40)
+		return 0;
 	if (bb->getMoveCount() < 9 && !skipBook/*opening book 8 ply*/) {
 		depth = 8 - bb->getMoveCount();
 
@@ -95,7 +97,7 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 		int i = 0;
 		for (i = 0; i < moves.size(); i++) {
 			bb->aiAddMove(moves[i]);
-			bb->convertIntoArray();
+		//	bb->convertIntoArray();
 			value = std::max(value, bbminimax(bb, depth - 1, !maxPlayer, alpha, beta, skipBook));
 
 			alpha = std::max(alpha, value);
@@ -141,7 +143,7 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 		int i = 0;
 		for (i = 0; i < moves.size(); i++) {
 			bb->playerAddMove(moves[i]);
-			bb->convertIntoArray();
+		//	bb->convertIntoArray();
 			value = std::min(value, bbminimax(bb, depth - 1, !maxPlayer, alpha, beta, skipBook));
 
 			bb->undo();
@@ -189,7 +191,7 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 // minimax controller can set depth and starts threads and waits for them to join
 int AI::bbmakeMove(BitboardField * bb)
 {
-	int depth = 2;
+	int depth = 3;
 	int moveIndex = 0;
 	int oldvalue = 0;
 	std::vector<int> moves = bb->genMoves();
@@ -240,18 +242,33 @@ int AI::bbmakeMove(BitboardField * bb)
 		}
 
 		if (!forced) {
-
+			/*
 			if (moves.size() == 7) {
 				//(42 needed worst case)
-				playFirst ? depth = 11 + bb->getMoveCount()/2: depth = 11 + bb->getMoveCount()/2;
+				playFirst ? depth = 11 + bb->getMoveCount()/3: depth = 11 + bb->getMoveCount()/3;
 			}
 			else if (moves.size() == 6) {
 				//(36 needed worst case)
-				playFirst ? depth = 12 + bb->getMoveCount() / 2 : depth = 12 + bb->getMoveCount() / 2;
+				playFirst ? depth = 13 + bb->getMoveCount() / 3 : depth = 13 + bb->getMoveCount() / 3;
 			}
 			else if (moves.size() == 5) {
 				//(30 needed worst case)
-				playFirst ? depth = 25 : depth = 25;
+				playFirst ? depth = 30 : depth = 30;
+			}
+			else {
+				depth = 25;
+			}*/
+			if (bb->getMoveCount() < 12) {
+				//(42 needed worst case)
+				playFirst ? depth = 11 + bb->getMoveCount() / 2 : depth = 11 + bb->getMoveCount() / 2;
+			}
+			else if (bb->getMoveCount() < 18) {
+				//(36 needed worst case)
+				playFirst ? depth = 12 + bb->getMoveCount() / 3 : depth = 12 + bb->getMoveCount() / 3;
+			}
+			else if (bb->getMoveCount() < 22) {
+				//(30 needed worst case)
+				playFirst ? depth = 18 + bb->getMoveCount() / 2 : depth = 18 + bb->getMoveCount() / 2;
 			}
 			else {
 				depth = 25;
@@ -313,7 +330,7 @@ int AI::bbmakeMove(BitboardField * bb)
 		}
 		moveIndex = max_element(vals.begin(), vals.end()) - vals.begin();
 	}
-	//printf("%d\n", tpcount);
+	printf("%d\n", tpcount);
 	//delete boards created for testing
 	for (int i = 0; i < moves.size(); i++) {
 		delete(bbs[i]);
@@ -328,7 +345,7 @@ void AI::bbthreadTest(std::vector<int> moves, std::vector<BitboardField*> bbs, i
 	int value = -1000;
 	int oldvalue = 0;
 	bbs[count]->aiAddMove(moves[count]);
-	bbs[count]->convertIntoArray();
+//	bbs[count]->convertIntoArray();
 	value = std::max(value, bbminimax(bbs[count], depth - 1, false, -10000, 10000, skipBook));
 	bbs[count]->undo();
 	v[count] = value;
@@ -339,35 +356,65 @@ void AI::bbthreadTest(std::vector<int> moves, std::vector<BitboardField*> bbs, i
 //----------------------------------------
 //Think on opponent turn
 //----------------------------------------
-void AI::idleComputation(std::vector<int> moves, int depth, std::vector<int>& v, int count)
+void AI::idleComputation(std::vector<int> moves, int depth, int count)
 {
 	int value = 1000;
 	this->bbsIdle[count]->playerAddMove(moves[count]);
 	value = std::min(value, bbminimax(this->bbsIdle[count], depth - 1, true, -10000, 10000, true));
 	this->bbsIdle[count]->undo();
+	valsIdle[count] = value;
 }
 
 std::vector<std::thread> AI::generateTranspositions(BitboardField * bb)
 {
 	int depth = 0;
-	std::vector<int> moves = bb->genMoves();
+	movesIdle = bb->genMoves();
 	std::vector<std::thread> threads;
 
 	std::vector<int> vals;
-
+	valsIdle.clear();
+	bbsIdle.clear();
 	// game boards for threads to eval
-	for (int i = 0; i < moves.size(); i++) {
+	for (int i = 0; i < movesIdle.size(); i++) {
 		BitboardField *b = new BitboardField();
-		int z = 10;
-		vals.push_back(z);
+		valsIdle.push_back(-1);
 		*b = *bb;
 		bbsIdle.push_back(b);
 	}
-
-	depth = 30;
+	/*
+	if (bb->getMoveCount() < 12) {
+		//(42 needed worst case)
+		playFirst ? depth = 20 + bb->getMoveCount() / 3 : depth = 20 + bb->getMoveCount() / 3;
+	}
+	else if (bb->getMoveCount() < 18) {
+		//(36 needed worst case)
+		playFirst ? depth = 21 + bb->getMoveCount() / 3 : depth = 21 + bb->getMoveCount() / 3;
+	}
+	else if (bb->getMoveCount() < 22) {
+		//(30 needed worst case)
+		playFirst ? depth = 25 + bb->getMoveCount() / 3 : depth = 25 + bb->getMoveCount() / 3;
+	}
+	else {
+		depth = 32;
+	}*/
+	if (bb->getMoveCount() < 12) {
+		//(42 needed worst case)
+		playFirst ? depth = 20 + bb->getMoveCount() / 2 : depth = 20 + bb->getMoveCount() / 2;
+	}
+	else if (bb->getMoveCount() < 18) {
+		//(36 needed worst case)
+		playFirst ? depth = 21 + bb->getMoveCount() / 3 : depth = 21 + bb->getMoveCount() / 3;
+	}
+	else if (bb->getMoveCount() < 22) {
+		//(30 needed worst case)
+		playFirst ? depth = 25 + bb->getMoveCount() / 3 : depth = 25 + bb->getMoveCount() / 3;
+	}
+	else {
+		depth = 32;
+	}
 	
-	for (int i = 0; i < moves.size(); i++) {
-		threads.push_back(std::thread(&AI::idleComputation, this, std::ref(moves), depth, std::ref(vals), i));
+	for (int i = 0; i < movesIdle.size(); i++) {
+		threads.push_back(std::thread(&AI::idleComputation, this, std::ref(movesIdle), depth, i));
 	}
 
 	return threads;

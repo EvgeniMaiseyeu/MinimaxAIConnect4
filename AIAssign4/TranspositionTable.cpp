@@ -35,6 +35,7 @@ unsigned __int32 TranspositionTable::get(unsigned __int64 playerkey, unsigned __
 	if (zHash == check) {
 		return TPT[index].value;
 	}
+
 	return 0;
 }
 
