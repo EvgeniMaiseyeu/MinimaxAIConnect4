@@ -258,15 +258,6 @@ int BitboardField::evaluate()
 	}
 
 	return utility + sum;
-	/*
-	for (int i = 0; i < 6; i++)
-		for (int j = 0; j <7; j++)	
-			if (field[i][j] == "x")
-				sum += evaluationTable[i][j];
-			else if (field[i][j] == "o")
-				sum -= evaluationTable[i][j];
-
-	return utility + sum; */
 }
 
 //return all possible moves for ai
@@ -421,54 +412,98 @@ void BitboardField::flip() {
 //checks if board state is in the opening book
 int BitboardField::evaluateBook(bool playfirst)
 {
-	bool next = false;
-	for (int k = 0; k < 67557; k++) {
-		//possible issue test later
-		if ((book[k*2] == aiBoard) && (book[k*2+1] == playerBoard)) {
-			if (bookResults[k] == "win") {
-			//	std::cout << "found a win" << std::endl;
-				if (playfirst) return 1000;
-				else return -1000;
-			}
+	if (playfirst) {
+		for (int k = 0; k < 67557; k++) {
+			//possible issue test later
+			if ((book[k * 2] == aiBoard) && (book[k * 2 + 1] == playerBoard)) {
+				if (bookResults[k] == "win") {
+					//	std::cout << "found a win" << std::endl;
+					return 1000;
+				}
 
-			if (bookResults[k] == "loss") {
-				//		std::cout << "found a loss" << std::endl;
-				if (playfirst) return -1000;
-				else return 1000;
+				if (bookResults[k] == "loss") {
+					//		std::cout << "found a loss" << std::endl;
+					return -1000;
+				}
+				if (bookResults[k] == "draw") {
+					//	std::cout << "found a draw" << std::endl;
+					return 0;
+				}
+
 			}
-			if (bookResults[k] == "draw") {
-				//	std::cout << "found a draw" << std::endl;
-				return 0;
-			}
-			
 		}
-	}
-	flip();
-	for (int k = 0; k < 67557; k++) {
-		//possible issue test later
-		if ((book[k * 2] == aiBoard) && (book[k * 2 + 1] == playerBoard)) {
-			if (bookResults[k] == "win") {
-				//	std::cout << "found a win" << std::endl;
-				flip();
-				if (playfirst) return 1000;
-				else return -1000;
-			}
+		flip();
+		for (int k = 0; k < 67557; k++) {
+			//possible issue test later
+			if ((book[k * 2] == aiBoard) && (book[k * 2 + 1] == playerBoard)) {
+				if (bookResults[k] == "win") {
+					//	std::cout << "found a win" << std::endl;
+					flip();
+					return 1000;
+				}
 
-			if (bookResults[k] == "loss") {
-				flip();
-				//		std::cout << "found a loss" << std::endl;
-				if (playfirst) return -1000;
-				else return 1000;
-			}
-			if (bookResults[k] == "draw") {
-				flip();
-				//	std::cout << "found a draw" << std::endl;
-				return 0;
-			}
+				if (bookResults[k] == "loss") {
+					flip();
+					//		std::cout << "found a loss" << std::endl;
+					return -1000;
+				}
+				if (bookResults[k] == "draw") {
+					flip();
+					//	std::cout << "found a draw" << std::endl;
+					return 0;
+				}
 
+			}
 		}
+		flip();
 	}
-	flip();
+	else
+	{
+		for (int k = 0; k < 67557; k++) {
+			//possible issue test later
+			if ((book[k * 2] == playerBoard) && (book[k * 2 + 1] == aiBoard)) {
+				if (bookResults[k] == "win") {
+					//	std::cout << "found a win" << std::endl;
+					return -1000;
+				}
+
+				if (bookResults[k] == "loss") {
+					//		std::cout << "found a loss" << std::endl;
+					return 1000;
+				}
+				if (bookResults[k] == "draw") {
+					//	std::cout << "found a draw" << std::endl;
+					return 0;
+				}
+
+			}
+		}
+		flip();
+		for (int k = 0; k < 67557; k++) {
+			//possible issue test later
+			if ((book[k * 2] == playerBoard) && (book[k * 2 + 1] == aiBoard)) {
+				if (bookResults[k] == "win") {
+					//	std::cout << "found a win" << std::endl;
+					flip();
+					return -1000;
+				}
+
+				if (bookResults[k] == "loss") {
+					flip();
+					//		std::cout << "found a loss" << std::endl;
+					return 1000;
+				}
+				if (bookResults[k] == "draw") {
+					flip();
+					//	std::cout << "found a draw" << std::endl;
+					return 0;
+				}
+
+			}
+		}
+		flip();
+	}
+//	printf("not in book ????????");
 	return -10000;
 }
 

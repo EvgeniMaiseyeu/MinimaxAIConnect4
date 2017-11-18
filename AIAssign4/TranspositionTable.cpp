@@ -21,7 +21,7 @@ TranspositionTable::TranspositionTable()
 }
 
 //get a board position from the hash table
-unsigned __int16 TranspositionTable::get(unsigned __int64 playerkey, unsigned __int64 aikey)
+unsigned __int32 TranspositionTable::get(unsigned __int64 playerkey, unsigned __int64 aikey)
 {
 	unsigned __int64 zHash = 0;
 	zHash = hashFunc(playerkey, aikey);
@@ -39,7 +39,7 @@ unsigned __int16 TranspositionTable::get(unsigned __int64 playerkey, unsigned __
 }
 
 //store a board position and value in the hash table
-void TranspositionTable::store(unsigned __int64 playerkey, unsigned __int64 aikey, unsigned __int16 value)
+void TranspositionTable::store(unsigned __int64 playerkey, unsigned __int64 aikey, unsigned __int32 value)
 {
 	unsigned __int64 zHash = hashFunc(playerkey, aikey);
 	unsigned __int64 key = zHash ^ value;

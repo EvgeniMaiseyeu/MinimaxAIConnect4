@@ -146,7 +146,6 @@
   <ItemGroup>
     <ClInclude Include="AI.h" />
     <ClInclude Include="BitboardField.h" />
-    <ClInclude Include="GameField.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TranspositionTable.h" />
@@ -155,7 +154,6 @@
     <ClCompile Include="AI.cpp" />
     <ClCompile Include="AIAssign4.cpp" />
     <ClCompile Include="BitboardField.cpp" />
-    <ClCompile Include="GameField.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

@@ -10,270 +10,177 @@
 //clears memory used by AI class
 AI::~AI()
 {
-	//delete(tt);
+	delete(tt);
 }
 
 //constructor for ai
 AI::AI(bool pFirst, std::string fileName) : playFirst(pFirst) {
-	//tt = new TranspositionTable();
+	tt = new TranspositionTable();
 	terminate = false;
 }
 
-//minimax for old game field not  used
-int AI::minimax(GameField* g, int depth, bool maxPlayer, int alpha, int beta) {
-	if (this->terminate) {
-		return 0;
-	} else if (g->getMoveCount() < 9 && g->getMoveCount() > 9/*opening book 8 ply*/) {
-			//depth = 8 - g->getMoveCount();
-		if (g->gameOverCheck("x")) {
-			return 1000;
-		}
-		else if (g->gameOverCheck("o")) {
-			return -1000;
-		}
-		else if (depth == 0) {
-			std::string(*qq)[67557][6][8] = &book;
-			int z = g->evaluateBook(qq, playFirst);
-			if (z == -10000) {
-				depth = 1;
-			}
-			else
-				return z;
-		}
-	}
-	else if (g->gameOverCheck("x")) {
-		return 1000;
-	}
-	else if (g->gameOverCheck("o")) {
-		return -1000;
-	}
-	else if (depth == 0) {
-		return g->evaluate();
-	}
-
-	std::vector<int> moves = g->genMoves();
-	if (maxPlayer) {
-		int value = -1000;
-		for (int i = 0; i < moves.size(); i++) {
-			g->addMove(moves[i], "x");
-			value = std::max(value, minimax(g, depth - 1, !maxPlayer, alpha, beta));
-			alpha = std::max(alpha, value);
-			g->undo();
-			if (beta <= alpha)
-				break;
-		}
-		return value;
-	}
-	else {
-		int value = 1000;
-		for (int i = 0; i < moves.size(); i++) {
-			g->addMove(moves[i], "o");
-			value = std::min(value, minimax(g, depth - 1, !maxPlayer, alpha, beta));
-			g->undo();
-			beta = std::min(beta, value);
-			if (beta <= alpha)
-				break;
-		}
-		return value;
-	}
-
-}
-
-//controls the minimax calls
-int AI::makeMove(GameField* gf) {
-	int depth = 2;
-	int moveIndex = 0;
-	int oldvalue = 0;
-	std::vector<int> moves = gf->genMoves();
-	std::vector<std::thread> threads;
-	std::vector<GameField*> gs;
-	std::vector<int> vals;
-
-
-	// game boards for threads to eval
-	for (int i = 0; i < moves.size(); i++) {
-		GameField *g = new GameField();
-		int z = 10;
-		vals.push_back(z);
-		*g = *gf;
-		gs.push_back(g);
-	}
-	bool win = false;
-	if (gf->getMoveCount() > 8) {
-		int value = -1000;
-		for (int i = 0; i < moves.size(); i++) {
-			gf->addMove(moves[i], "x");
-			value = minimax(gf, depth - 1, false, -10000, 10000);
-			gf->undo();
-			vals[i] = value;
-			if (value == 1000) {
-				win = true;
-				break;
-			}
-		}
-	}
-
-	//create threads
-	//launch threads
-	std::mutex m;
-
-	moveIndex = max_element(vals.begin(), vals.end()) - vals.begin();
-	if (!win) {
-		bool forced = false;
-		int fCount = 0;
-		for (int i = 0; i < vals.size(); i++) {
-			if (vals[i] == -1000)
-				fCount++;
-			if (fCount == vals.size()-1) {
-				forced = true;
-				break;
-			}
-		}
-
-		if (!forced) {
-		
-			if (moves.size() == 7) {
-				//(42 needed worst case)
-				depth = 10;
-			}
-			else if (moves.size() == 6) {
-				//(36 needed worst case)
-				depth = 11;
-			}
-			else if (moves.size() == 5) {
-				//(30 needed worst case)
-				depth = 13;
-			}
-			else {
-				depth = 25;
-			}
-
-			for (int i = 0; i < moves.size(); i++) {
-				threads.push_back(std::thread(&AI::threadTest, this, std::ref(moves), std::ref(gs), depth, std::ref(vals), i));
-				m.lock();
-				for (int j = 0; j < vals.size(); j++) {
-					if (vals[j] == 1000) {
-						terminate = true;
-						break;
-					}
-				}
-				m.unlock();
-			}
-
-			//sync threads
-			for (auto& th : threads) {
-				th.join();
-				//th.~thread();
-			}
-			terminate = false;
-		}
-		moveIndex = max_element(vals.begin(), vals.end()) - vals.begin();
-	}
-	//delete boards created for testing
-	for (int i = 0; i < moves.size(); i++) {
-		delete(gs[i]);
-	}
-	gf->addMove(moves[moveIndex], "x");
-	return moves[moveIndex];
-}
-
-//old thread function  to split up minimax work
-void AI::threadTest(std::vector<int> moves, std::vector<GameField*> gs, int depth, std::vector<int> &v, int count) {
-	int value = -1000;
-	int oldvalue = 0;
-	gs[count]->addMove(moves[count], "x");
-	value = std::max(value, minimax(gs[count], depth - 1, false, -10000, 10000));
-	gs[count]->undo();
-	v[count] = value;
-	//store value;
-}
-
+//---------------------------------------------
+//Bit board minimax
+//---------------------------------------------
 //current bitboard minimax algorithm with optimizations
 int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int beta, bool skipBook)
 {
 	if (this->terminate) {
 		return 0;
 	}
-	/*
+	int alphaOriginal = alpha;
+	int betaOriginal = beta;
+	int moveOrder = 7;
+	bool negated = false;
 	unsigned __int64 pB = bb->getPlayerBoard();
 	unsigned __int64 aiB = bb->getAIBoard();
-	unsigned __int16 ttScore = tt->get(pB, aiB);
-	if (ttScore != 0) {
-		tpcount++;
-		if (ttScore == 10001) return -1000;
-		else return ttScore;
-	}
-	*/
-	else if (bb->getMoveCount() < 9 && !skipBook && playFirst/*opening book 8 ply*/) {
-		depth = 8 - bb->getMoveCount();
-		if (bb->aiWonCheck()) {
-			return 1000;
-		}
-		else if (bb->playerWonCheck()) {
-			return -1000;
-		}
-		else if (depth == 0) {
-			int z = bb->evaluateBook(playFirst);
-			if (z == -10000) {
-				depth = 1;
-			}
-			else
-				return z;
-		}
-	}
-	else if (bb->aiWonCheck()) {
+	unsigned __int32 ttScore = tt->get(pB, aiB);
+	if (bb->aiWonCheck()) {
 		return 1000;
 	}
 	else if (bb->playerWonCheck()) {
 		return -1000;
 	}
-	else if (depth == 0) {
+	if (bb->getMoveCount() < 9 && !skipBook/*opening book 8 ply*/) {
+		depth = 8 - bb->getMoveCount();
+
+		if (depth == 0) {
+			int z = bb->evaluateBook(playFirst);
+			if (z == -10000) {
+				depth = 6;
+			}
+			else
+				return z;
+		}
+	}
+	else {
+		if (ttScore != 0 && depth <= (ttScore >> 16)) {
+			unsigned __int32 scoreMask = 0b00000000000000000000001111111111;
+			unsigned __int32 negMask = 1;
+			unsigned __int32 typeMask = 3;
+			tpcount++;
+			if ((ttScore >> 15) & negMask) {
+				return -1000;
+			}
+			else {
+				if ((ttScore & typeMask) == 0)
+					return (ttScore >> 5 & scoreMask);
+				else if ((ttScore & typeMask) == 1)
+					alpha = std::max(alpha, (int)(ttScore >> 5 & scoreMask));
+				else if ((ttScore & typeMask) == 2)
+					beta = std::min(beta, (int)(ttScore >> 5 & scoreMask));
+				if (alpha > beta)
+					return((ttScore >> 5) & scoreMask);
+			}
+		}
+		else if (ttScore != 0) {
+			unsigned __int32 moveMask = 0b00000000000000000000000000000111;
+			moveOrder = moveMask & (ttScore >> 2);
+		}
+	}
+	if (depth == 0) {
 		return bb->evaluate();
 	}
-
 	std::vector<int> moves = bb->genMoves();
+	if (moveOrder != 7 && moves.size() > 1) {
+		std::vector<int>::iterator it;
+		it = find(moves.begin(), moves.end(), moveOrder);
+		int index = distance(moves.begin(), it);
+		if (index != 0) {
+			std::swap(moves[0], moves[index-1]);
+		}
+	}
 	if (maxPlayer) {
 		int value = -1000;
-		for (int i = 0; i < moves.size(); i++) {
+		int i = 0;
+		for (i = 0; i < moves.size(); i++) {
 			bb->aiAddMove(moves[i]);
 			bb->convertIntoArray();
 			value = std::max(value, bbminimax(bb, depth - 1, !maxPlayer, alpha, beta, skipBook));
-			/*if (ttScore == 0 && !skipBook) {
-				unsigned __int16 val = 0;
-				if (value == -1000)
-					val = 10001;
-				else
-					val = value;
-				tt->store(pB, aiB, val);
-			}*/
+
 			alpha = std::max(alpha, value);
 			bb->undo();
 			if (beta <= alpha)
 				break;
 		}
+		unsigned __int32 hashValue = 0;
+		unsigned __int32 hashmove = 0; 
+		unsigned __int32 hashneg = 0;
+		unsigned __int32 hashtype = 0;
+		unsigned __int32 hashdepth = 0;
+		if (value < 0) {
+			negated = true;
+			value = -value;
+			hashneg = 1;
+		}
+		if (i < moves.size()) {
+			hashmove = i;
+		}
+		else {
+			hashmove = 7;
+		}
+		hashValue = value;
+		if (value <= alphaOriginal)
+			hashtype = 2;
+		else if (value >= betaOriginal)
+			hashtype = 1;
+		else
+			hashtype = 0;
 
+		hashdepth = depth;
+		hashValue = hashtype | (hashmove << 2) | (hashValue << 5) | (hashneg << 15) | (hashdepth << 16);
+		tt->store(pB, aiB, hashValue);
+		if (negated) {
+			value = -value;
+			negated = false;
+		}
 		return value;
 	}
 	else {
 		int value = 1000;
-		for (int i = 0; i < moves.size(); i++) {
+		int i = 0;
+		for (i = 0; i < moves.size(); i++) {
 			bb->playerAddMove(moves[i]);
 			bb->convertIntoArray();
 			value = std::min(value, bbminimax(bb, depth - 1, !maxPlayer, alpha, beta, skipBook));
-		/*	if (ttScore == 0 && !skipBook) {
-				unsigned __int16 val = 0;
-				if (value == -1000)
-					val = 10001;
-				else
-					val = value;
-				tt->store(pB, aiB, val);
-			}*/
+
 			bb->undo();
 			beta = std::min(beta, value);
 			if (beta <= alpha)
 				break;
 		}
 
+		unsigned __int32 hashValue = 0;
+		unsigned __int32 hashmove = 0;
+		unsigned __int32 hashneg = 0;
+		unsigned __int32 hashtype = 0;
+		unsigned __int32 hashdepth = 0;
+		if (value < 0) {
+			negated = true;
+			value = -value;
+			hashneg = 1;
+		}
+		if (i < moves.size()) {
+			hashmove = i;
+		}
+		else {
+			hashmove = 7;
+		}
+		hashValue = value;
+		if (value <= alphaOriginal)
+			hashtype = 2;
+		else if (value >= betaOriginal)
+			hashtype = 1;
+		else
+			hashtype = 0;
+
+		hashdepth = depth;
+		hashValue = hashtype | (hashmove << 2) | (hashValue << 5) | (hashneg << 15) | (hashdepth << 16);
+		tt->store(pB, aiB, hashValue);
+		if (negated) {
+			value = -value;
+			negated = false;
+		}
 		return value;
 	}
 
@@ -282,7 +189,7 @@ int AI::bbminimax(BitboardField * bb, int depth, bool maxPlayer, int alpha, int 
 // minimax controller can set depth and starts threads and waits for them to join
 int AI::bbmakeMove(BitboardField * bb)
 {
-	int depth = 4;
+	int depth = 2;
 	int moveIndex = 0;
 	int oldvalue = 0;
 	std::vector<int> moves = bb->genMoves();
@@ -300,7 +207,7 @@ int AI::bbmakeMove(BitboardField * bb)
 		bbs.push_back(b);
 	}
 	bool win = false;
-	if (bb->getMoveCount() > 0) {
+	/*if (bb->getMoveCount() > 0) {
 		int value = -1000;
 		for (int i = 0; i < moves.size(); i++) {
 			bb->aiAddMove(moves[i]);
@@ -312,7 +219,7 @@ int AI::bbmakeMove(BitboardField * bb)
 				break;
 			}
 		}
-	}
+	}*/
 
 	//create threads
 	//launch threads
@@ -336,22 +243,22 @@ int AI::bbmakeMove(BitboardField * bb)
 
 			if (moves.size() == 7) {
 				//(42 needed worst case)
-				playFirst ? depth = 11 : depth = 11;
+				playFirst ? depth = 11 + bb->getMoveCount()/2: depth = 11 + bb->getMoveCount()/2;
 			}
 			else if (moves.size() == 6) {
 				//(36 needed worst case)
-				playFirst ? depth = 12 : depth = 12;
+				playFirst ? depth = 12 + bb->getMoveCount() / 2 : depth = 12 + bb->getMoveCount() / 2;
 			}
 			else if (moves.size() == 5) {
 				//(30 needed worst case)
-				playFirst ? depth = 15 : depth = 14;
+				playFirst ? depth = 25 : depth = 25;
 			}
 			else {
 				depth = 25;
 			}
-			printf("%d\n", moves.size());
+			threads.clear();
 			for (int i = 0; i < moves.size(); i++) {
-				threads.push_back(std::thread(&AI::bbthreadTest, this, std::ref(moves), std::ref(bbs), depth, std::ref(vals), i));
+				threads.push_back(std::thread(&AI::bbthreadTest, this, std::ref(moves), std::ref(bbs), depth, std::ref(vals), i, false));
 				m.lock();
 				for (int j = 0; j < vals.size(); j++) {
 					if (vals[j] == 1000) {
@@ -368,10 +275,47 @@ int AI::bbmakeMove(BitboardField * bb)
 				//th.~thread();
 			}
 			terminate = false;
+			// if all values are -1000 and total moves less then 9 and we are 2nd redo without opening book
+
+			if (!playFirst && bb->getMoveCount() < 9) {
+				bool skip = false;
+				for (int i = 0; i < vals.size(); i++) {
+					if (vals[i] != -1000)
+						skip = true;
+						break;
+				}
+				if (*max_element(vals.begin(), vals.end()) == 1000) {
+					printf("ai win\n");
+					skip = true;
+				}
+				if (!skip) {
+					printf("ai lose\n");
+					threads.clear();
+					for (int i = 0; i < moves.size(); i++) {
+						threads.push_back(std::thread(&AI::bbthreadTest, this, std::ref(moves), std::ref(bbs), depth, std::ref(vals), i, true));
+						m.lock();
+						for (int j = 0; j < vals.size(); j++) {
+							if (vals[j] == 1000) {
+								terminate = true;
+								break;
+							}
+						}
+						m.unlock();
+					}
+
+					//sync threads
+					for (auto& th : threads) {
+						th.join();
+						//th.~thread();
+					}
+				}
+			}
+
+			terminate = false;
 		}
 		moveIndex = max_element(vals.begin(), vals.end()) - vals.begin();
 	}
-	
+	printf("%d\n", tpcount);
 	//delete boards created for testing
 	for (int i = 0; i < moves.size(); i++) {
 		delete(bbs[i]);
@@ -381,14 +325,54 @@ int AI::bbmakeMove(BitboardField * bb)
 }
 
 //current bitboard thread function each thread calls this to check a possible move subtree and return the value
-void AI::bbthreadTest(std::vector<int> moves, std::vector<BitboardField*> bbs, int depth, std::vector<int>& v, int count)
+void AI::bbthreadTest(std::vector<int> moves, std::vector<BitboardField*> bbs, int depth, std::vector<int>& v, int count, bool skipBook)
 {
 	int value = -1000;
 	int oldvalue = 0;
 	bbs[count]->aiAddMove(moves[count]);
 	bbs[count]->convertIntoArray();
-	value = std::max(value, bbminimax(bbs[count], depth - 1, false, -10000, 10000, false));
+	value = std::max(value, bbminimax(bbs[count], depth - 1, false, -10000, 10000, skipBook));
 	bbs[count]->undo();
 	v[count] = value;
 	//store value;
 }
+
+
+//----------------------------------------
+//Think on opponent turn
+//----------------------------------------
+void AI::idleComputation(std::vector<int> moves, int depth, std::vector<int>& v, int count)
+{
+	int value = 1000;
+	this->bbsIdle[count]->playerAddMove(moves[count]);
+	value = std::min(value, bbminimax(this->bbsIdle[count], depth - 1, true, -10000, 10000, true));
+	this->bbsIdle[count]->undo();
+}
+
+std::vector<std::thread> AI::generateTranspositions(BitboardField * bb)
+{
+	int depth = 0;
+	std::vector<int> moves = bb->genMoves();
+	std::vector<std::thread> threads;
+
+	std::vector<int> vals;
+
+	// game boards for threads to eval
+	for (int i = 0; i < moves.size(); i++) {
+		BitboardField *b = new BitboardField();
+		int z = 10;
+		vals.push_back(z);
+		*b = *bb;
+		bbsIdle.push_back(b);
+	}
+
+	depth = 30;
+	
+	for (int i = 0; i < moves.size(); i++) {
+		threads.push_back(std::thread(&AI::idleComputation, this, std::ref(moves), depth, std::ref(vals), i));
+	}
+
+	return threads;
+
+}
+
