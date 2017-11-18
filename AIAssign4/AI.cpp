@@ -207,7 +207,7 @@ int AI::bbmakeMove(BitboardField * bb)
 		bbs.push_back(b);
 	}
 	bool win = false;
-	/*if (bb->getMoveCount() > 0) {
+	if (bb->getMoveCount() > 0) {
 		int value = -1000;
 		for (int i = 0; i < moves.size(); i++) {
 			bb->aiAddMove(moves[i]);
@@ -219,7 +219,7 @@ int AI::bbmakeMove(BitboardField * bb)
 				break;
 			}
 		}
-	}*/
+	}
 
 	//create threads
 	//launch threads
@@ -285,11 +285,9 @@ int AI::bbmakeMove(BitboardField * bb)
 						break;
 				}
 				if (*max_element(vals.begin(), vals.end()) == 1000) {
-					printf("ai win\n");
 					skip = true;
 				}
 				if (!skip) {
-					printf("ai lose\n");
 					threads.clear();
 					for (int i = 0; i < moves.size(); i++) {
 						threads.push_back(std::thread(&AI::bbthreadTest, this, std::ref(moves), std::ref(bbs), depth, std::ref(vals), i, true));
@@ -315,7 +313,7 @@ int AI::bbmakeMove(BitboardField * bb)
 		}
 		moveIndex = max_element(vals.begin(), vals.end()) - vals.begin();
 	}
-	printf("%d\n", tpcount);
+	//printf("%d\n", tpcount);
 	//delete boards created for testing
 	for (int i = 0; i < moves.size(); i++) {
 		delete(bbs[i]);
